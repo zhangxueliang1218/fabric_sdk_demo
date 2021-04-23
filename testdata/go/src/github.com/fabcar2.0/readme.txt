@@ -1,0 +1,2 @@
+1.修改方法InitLedger里的初始化数据
+2.增加方法QueryCar2

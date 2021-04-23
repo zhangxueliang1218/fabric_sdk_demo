@@ -2,7 +2,7 @@ version: 1.0.0
 client:
   organization: org1.zxl.com
   logging:
-    level: debug
+    level: info
   cryptoconfig:
     path: D:/mygithub/fabric_sdk_demo/certs
   credentialStore:

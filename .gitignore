@@ -4,9 +4,10 @@ bin-release/
 [Oo]bj/
 [Bb]in/
 
-certs/bak_resources/
+
 # Other files and folders
 .settings/
+certs/
 vendor/
 tmp/
 # Executables

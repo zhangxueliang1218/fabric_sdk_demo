@@ -24,9 +24,16 @@ const (
 const (
 	ccFilePath  = "D:\\mygithub\\fabric_sdk_demo\\testdata\\go\\src\\github.com\\fabcar"
 	ccID        = "fabcar"
-	cclabel     = "fabcar_0"
+	cclabel     = "fabcar_1"
 	ccSpec_Type = pb.ChaincodeSpec_GOLANG
+
+	ccVersion  = "1.0"
+	ccSequence = 2 // 从1开始；注意升级时需要自动加1
+
+	upgradeccFilePath = "D:\\mygithub\\fabric_sdk_demo\\testdata\\go\\src\\github.com\\fabcar2.0"
+	//upgradeccFilePath = "D:\\mygithub\\fabric_sdk_demo\\testdata\\go\\src\\github.com\\fabcar"
 )
+
 const (
 	configName = "./config/config_e2e.yaml"
 )
@@ -41,8 +48,10 @@ func main() {
 	//DeployCCViaLifecycleTest()
 
 	//3. 2021/04/23 15:41:28 success
-	SendTransactionTest()
+	//SendTransactionTest()
 
+	//4.
+	UpgradeCCViaLifecycleTest()
 	fmt.Println("-------------- test ending --------------")
 }
 
@@ -111,4 +120,28 @@ func SendTransactionTest() {
 	SendTransaction(client)
 
 	fmt.Println("-------------- SendTransactionTest ending --------------")
+}
+
+// 升级时需要修改：
+//		链码的地址以及sequence
+func UpgradeCCViaLifecycleTest() {
+	fmt.Println("-------------- test start--------------")
+	configProvider := config.FromFile(configName)
+	sdk, err := fabsdk.New(configProvider)
+	if err != nil {
+		fmt.Printf("fabsdk.New failed:%s \n", err)
+		return
+	}
+	defer sdk.Close()
+	//prepare context
+	adminContext := sdk.Context(fabsdk.WithUser(orgAdmin), fabsdk.WithOrg(orgName))
+	// Org resource management client
+	orgResMgmt, err := resmgmt.New(adminContext)
+	if err != nil {
+		fmt.Printf("Failed to create new resource management client: %s \n", err)
+		return
+	}
+	// orgAdmin
+	UpgradeCCViaLifecycle(orgResMgmt)
+	fmt.Println("-------------- test ending --------------")
 }

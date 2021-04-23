@@ -18,6 +18,85 @@ import (
 	lcpackager "github.com/hyperledger/fabric-sdk-go/pkg/fab/ccpackager/lifecycle"
 )
 
+func UpgradeCCViaLifecycle(orgResMgmt *resmgmt.Client) {
+	//Package cc
+	ccPkg, err := packageCC(upgradeccFilePath, cclabel, ccSpec_Type)
+	if err != nil {
+		fmt.Printf("packageCC failed:%s \n", err)
+		return
+	}
+
+	// Install cc
+	packageID, installCCResp, err := installCC(cclabel, ccPkg, orgResMgmt)
+	if err != nil {
+		fmt.Printf("installCC failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("Target:%s, Status:%s, PackageID:%s \n", installCCResp.Target, installCCResp.Status, installCCResp.PackageID)
+	}
+
+	// Get installed cc package
+	ccPkgResp, err := getInstalledCCPackage(packageID, orgResMgmt)
+	areEqual := util.ObjectsAreEqual(ccPkg, ccPkgResp)
+	if !areEqual {
+		fmt.Println("getInstalledCCPackage compare result: false")
+		//return
+	}
+
+	//Query installed cc
+	isInstalled, err := queryInstalled(cclabel, packageID, orgResMgmt)
+	if err != nil {
+		fmt.Printf("queryInstalled failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("queryInstalled result: %s \n", isInstalled)
+	}
+
+	// Approve cc
+	txnID, err := approveCC(ccID, packageID, "1.0", 1, orgResMgmt)
+	if err != nil {
+		fmt.Printf("approveCC failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("approveCC txnID: %s \n", txnID)
+	}
+
+	// Query approve cc
+	approvedCCResp, err := queryApprovedCC(ccID, ccSequence, orgResMgmt)
+	if err != nil {
+		fmt.Printf("queryApprovedCC failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("queryApprovedCC result: %#v \n", approvedCCResp)
+	}
+
+	// Check commit readiness
+	readiness, err := checkCCCommitReadiness(ccID, ccVersion, ccSequence, orgResMgmt)
+	if err != nil {
+		fmt.Printf("checkCCCommitReadiness failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("checkCCCommitReadiness result: %#v \n", readiness)
+	}
+
+	//Commit cc
+	commitCCtxnID, err := commitCC(ccID, ccVersion, ccSequence, orgResMgmt)
+	if err != nil {
+		fmt.Printf("commitCC failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("commitCC result: %#v \n", commitCCtxnID)
+	}
+	//Query committed cc
+	isCommitted, err := queryCommittedCC(ccID, orgResMgmt)
+	if err != nil {
+		fmt.Printf("queryCommittedCC failed:%s \n", err)
+		return
+	} else {
+		fmt.Printf("queryCommittedCC result: %s \n", isCommitted)
+	}
+}
+
 func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	//Package cc
 	ccPkg, err := packageCC(ccFilePath, cclabel, ccSpec_Type)
@@ -53,7 +132,7 @@ func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	}
 
 	// Approve cc
-	txnID, err := approveCC(ccID, packageID, orgResMgmt)
+	txnID, err := approveCC(ccID, packageID, "1.0", 1, orgResMgmt)
 	if err != nil {
 		fmt.Printf("approveCC failed:%s \n", err)
 		return
@@ -62,7 +141,7 @@ func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	}
 
 	// Query approve cc
-	approvedCCResp, err := queryApprovedCC(ccID, orgResMgmt)
+	approvedCCResp, err := queryApprovedCC(ccID, ccSequence, orgResMgmt)
 	if err != nil {
 		fmt.Printf("queryApprovedCC failed:%s \n", err)
 		return
@@ -71,7 +150,7 @@ func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	}
 
 	// Check commit readiness
-	readiness, err := checkCCCommitReadiness(ccID, orgResMgmt)
+	readiness, err := checkCCCommitReadiness(ccID, ccVersion, ccSequence, orgResMgmt)
 	if err != nil {
 		fmt.Printf("checkCCCommitReadiness failed:%s \n", err)
 		return
@@ -80,7 +159,7 @@ func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	}
 
 	//Commit cc
-	commitCCtxnID, err := commitCC(ccID, orgResMgmt)
+	commitCCtxnID, err := commitCC(ccID, ccVersion, ccSequence, orgResMgmt)
 	if err != nil {
 		fmt.Printf("commitCC failed:%s \n", err)
 		return
@@ -180,13 +259,13 @@ func queryInstalled(label string, packageID string, orgResMgmt *resmgmt.Client) 
 	return false, nil
 }
 
-func approveCC(ccID, packageID string, orgResMgmt *resmgmt.Client) (fab.TransactionID, error) {
+func approveCC(ccID, packageID, version string, sequence int64, orgResMgmt *resmgmt.Client) (fab.TransactionID, error) {
 	ccPolicy := policydsl.SignedByAnyMember([]string{Org1Msp})
 	approveCCReq := resmgmt.LifecycleApproveCCRequest{
 		Name:              ccID,
-		Version:           "0",
+		Version:           version, //"0",
 		PackageID:         packageID,
-		Sequence:          1,
+		Sequence:          sequence, //1,
 		EndorsementPlugin: "escc",
 		ValidationPlugin:  "vscc",
 		SignaturePolicy:   ccPolicy,
@@ -201,10 +280,10 @@ func approveCC(ccID, packageID string, orgResMgmt *resmgmt.Client) (fab.Transact
 	return txnID, nil
 }
 
-func queryApprovedCC(ccID string, orgResMgmt *resmgmt.Client) (resmgmt.LifecycleApprovedChaincodeDefinition, error) {
+func queryApprovedCC(ccID string, sequence int64, orgResMgmt *resmgmt.Client) (resmgmt.LifecycleApprovedChaincodeDefinition, error) {
 	queryApprovedCCReq := resmgmt.LifecycleQueryApprovedCCRequest{
 		Name:     ccID,
-		Sequence: 1,
+		Sequence: sequence,
 	}
 	resp, err := orgResMgmt.LifecycleQueryApprovedCC(channelID, queryApprovedCCReq, resmgmt.WithTargetEndpoints(peer1), resmgmt.WithRetry(retry.DefaultResMgmtOpts))
 	if err != nil {
@@ -214,15 +293,15 @@ func queryApprovedCC(ccID string, orgResMgmt *resmgmt.Client) (resmgmt.Lifecycle
 	return resp, nil
 }
 
-func checkCCCommitReadiness(ccID string, orgResMgmt *resmgmt.Client) (resmgmt.LifecycleCheckCCCommitReadinessResponse, error) {
+func checkCCCommitReadiness(ccID, version string, sequence int64, orgResMgmt *resmgmt.Client) (resmgmt.LifecycleCheckCCCommitReadinessResponse, error) {
 	ccPolicy := policydsl.SignedByAnyMember([]string{Org1Msp})
 	req := resmgmt.LifecycleCheckCCCommitReadinessRequest{
 		Name:              ccID,
-		Version:           "0",
+		Version:           version,
 		EndorsementPlugin: "escc",
 		ValidationPlugin:  "vscc",
 		SignaturePolicy:   ccPolicy,
-		Sequence:          1,
+		Sequence:          sequence,
 		InitRequired:      true,
 	}
 	resp, err := orgResMgmt.LifecycleCheckCCCommitReadiness(channelID, req, resmgmt.WithTargetEndpoints(peer1), resmgmt.WithRetry(retry.DefaultResMgmtOpts))
@@ -233,12 +312,12 @@ func checkCCCommitReadiness(ccID string, orgResMgmt *resmgmt.Client) (resmgmt.Li
 	return resp, nil
 }
 
-func commitCC(ccID string, orgResMgmt *resmgmt.Client) (fab.TransactionID, error) {
+func commitCC(ccID, version string, sequence int64, orgResMgmt *resmgmt.Client) (fab.TransactionID, error) {
 	ccPolicy := policydsl.SignedByAnyMember([]string{Org1Msp})
 	req := resmgmt.LifecycleCommitCCRequest{
 		Name:              ccID,
-		Version:           "0",
-		Sequence:          1,
+		Version:           version,
+		Sequence:          sequence,
 		EndorsementPlugin: "escc",
 		ValidationPlugin:  "vscc",
 		SignaturePolicy:   ccPolicy,
