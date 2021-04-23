@@ -4,9 +4,11 @@ bin-release/
 [Oo]bj/
 [Bb]in/
 
+certs/bak_resources/
 # Other files and folders
 .settings/
-
+vendor/
+tmp/
 # Executables
 *.swf
 *.air

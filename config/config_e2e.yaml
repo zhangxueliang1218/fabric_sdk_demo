@@ -1,0 +1,90 @@
+version: 1.0.0
+client:
+  organization: org1.zxl.com
+  logging:
+    level: debug
+  cryptoconfig:
+    path: D:/mygithub/fabric_sdk_demo/certs
+  credentialStore:
+    path: D:/mygithub/fabric_sdk_demo/tmp/state-store
+    cryptoStore:
+      path: D:/mygithub/fabric_sdk_demo/tmp/msp
+  BCCSP:
+    security:
+      enabled: true
+      default:
+        provider: "SW"
+      hashAlgorithm: "SHA2"
+      softVerify: true
+      level: 256
+
+  tlsCerts:
+    systemCertPool: false
+    client:
+      key:
+        path: D:/mygithub/fabric_sdk_demo/certs/peerOrganizations/org1.zxl.com/peers/peer1.org1.zxl.com/tls/server.key
+      cert:
+        path: D:/mygithub/fabric_sdk_demo/certs/peerOrganizations/org1.zxl.com/peers/peer1.org1.zxl.com/tls/server.crt
+
+channels:
+  zxlchannel:
+    peers:
+      peer1.org1.zxl.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+organizations:
+  org1.zxl.com:
+    mspid: Org1MSP
+    cryptoPath:  peerOrganizations/org1.zxl.com/users/{username}@org1.zxl.com/msp
+    peers:
+      - peer1.org1.zxl.com
+    certificateAuthorities:
+      - ca.org1.zxl.com
+      -
+orderers:
+  orderer1.orderer.zxl.com:
+    url: orderer1.orderer.zxl.com:7050
+
+    grpcOptions:
+      ssl-target-name-override: orderer1.orderer.zxl.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+
+    tlsCACerts:
+      path: D:/mygithub/fabric_sdk_demo/certs/ordererOrganizations/orderer.zxl.com/tlsca/tlsca.orderer.zxl.com-cert.pem
+peers:
+  peer1.org1.zxl.com:
+    url: peer1.org1.zxl.com:7051
+    grpcOptions:
+      ssl-target-name-override: peer1.org1.zxl.com
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      allow-insecure: false
+    tlsCACerts:
+      path: D:/mygithub/fabric_sdk_demo/certs/peerOrganizations/org1.zxl.com/tlsca/tlsca.org1.zxl.com-cert.pem
+
+entityMatchers:
+  peer:
+    - pattern: (\w*)peer1.org1.zxl.com(\w*)
+      urlSubstitutionExp: 161.189.73.72:1051
+      sslTargetOverrideUrlSubstitutionExp: peer1.org1.zxl.com
+      mappedHost: peer1.org1.zxl.com
+
+  orderer:
+    - pattern: (\w*)orderer1.orderer.zxl.com(\w*)
+      urlSubstitutionExp: 161.189.73.72:7050
+      sslTargetOverrideUrlSubstitutionExp: orderer1.orderer.zxl.com
+      mappedHost: orderer1.orderer.zxl.com
+
+  certificateAuthority:
+    - pattern: (\w+)ca.org1.zxl.com(\w+)
+      urlSubstitutionExp: 52.83.28.108:8051
+      mappedHost: ca.org1.zxl.com
+

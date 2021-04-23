@@ -16,23 +16,11 @@ import (
 	"github.com/zhangxueliang1218/fabric_sdk_demo/pkg/util"
 
 	lcpackager "github.com/hyperledger/fabric-sdk-go/pkg/fab/ccpackager/lifecycle"
-	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
 )
 
-const (
-	Org1Msp   = "Org1MSP"
-	PeerUser1 = "User1"
-)
-const (
-	ccFilePath  = ""
-	ccID        = "fabcar"
-	cclabel     = "fabcar_1.0"
-	ccSpec_Type = pb.ChaincodeSpec_GOLANG
-)
-
-func DeployCCViaLifecycleTest(orgResMgmt *resmgmt.Client) {
+func DeployCCViaLifecycle(orgResMgmt *resmgmt.Client) {
 	//Package cc
-	ccPkg, err := packageCC(cclabel, ccFilePath, ccSpec_Type)
+	ccPkg, err := packageCC(ccFilePath, cclabel, ccSpec_Type)
 	if err != nil {
 		fmt.Printf("packageCC failed:%s \n", err)
 		return
@@ -109,13 +97,7 @@ func DeployCCViaLifecycleTest(orgResMgmt *resmgmt.Client) {
 	}
 }
 
-func SendTransactionTest(sdk *fabsdk.FabricSDK) {
-	clientChannelContext := sdk.ChannelContext(channelID, fabsdk.WithUser(PeerUser1), fabsdk.WithOrg(orgName))
-	client, err := channel.New(clientChannelContext)
-	if err != nil {
-		fmt.Printf("channel.New failed:%s \n", err.Error())
-		return
-	}
+func SendTransaction(client *channel.Client) {
 	//Init cc
 	cc, err := initCC(ccID, client)
 	if err != nil {
@@ -288,8 +270,8 @@ func queryCommittedCC(ccID string, orgResMgmt *resmgmt.Client) (bool, error) {
 }
 
 func initCC(ccID string, client *channel.Client) (channel.Response, error) {
-	args := [][]byte{[]byte("init"), []byte("a"), []byte("100"), []byte("b"), []byte("200")}
-	fcn := "init"
+	args := [][]byte{}
+	fcn := "InitLedger"
 	isInit := true
 	resp, err := client.Execute(channel.Request{ChaincodeID: ccID, Fcn: fcn, Args: args, IsInit: isInit}, channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
@@ -301,15 +283,15 @@ func initCC(ccID string, client *channel.Client) (channel.Response, error) {
 
 func invokeCC(ccID string, client *channel.Client) (channel.Response, error) {
 	var args [][]byte
-	args = append(args, []byte("asset7"))
-	args = append(args, []byte("zxlcolor"))
-	args = append(args, []byte("12181218"))
+	args = append(args, []byte("hd001"))
+	args = append(args, []byte("changcheng"))
+	args = append(args, []byte("h7"))
+	args = append(args, []byte("white"))
 	args = append(args, []byte("zxl"))
-	args = append(args, []byte("202104201653"))
 
 	invkerRequest := channel.Request{
 		ChaincodeID: ccID,
-		Fcn:         "UpdateAsset", //"UpdateAsset",
+		Fcn:         "CreateCar",
 		Args:        args,
 	}
 	resp, err := client.Execute(invkerRequest) //handler
@@ -322,11 +304,11 @@ func invokeCC(ccID string, client *channel.Client) (channel.Response, error) {
 
 func queryCC(ccID string, client *channel.Client) (channel.Response, error) {
 	var args [][]byte
-	args = append(args, []byte("asset7"))
+	args = append(args, []byte("hd001"))
 	//
 	request := channel.Request{
 		ChaincodeID: ccID,
-		Fcn:         "ReadAsset",
+		Fcn:         "QueryCar",
 		Args:        args,
 	}
 	resp, err := client.Query(request)
